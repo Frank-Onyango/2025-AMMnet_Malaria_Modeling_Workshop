@@ -1,0 +1,485 @@
+---
+title:  "Data Visualization in R with no Coding/Mininal coding"
+author:
+- name: D.K.Muriithi
+  affiliation: Chuka University, Kenya
+#institute: CDAM
+date: "`r Sys.Date()`"
+output:html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.height = 4,
+	fig.width = 8,
+	message = FALSE,
+	warning = FALSE,
+	comment = NA)
+```
+
+ 
+# Introduction
+
+Data visualization in R with no coding refers to the use of graphical user interfaces (GUIs) or point-and-click tools built on R that allow users to create charts, graphs, and explore data visually without writing R code manually.
+
+# Esquisse R package
+
+The Esquisse R package is an interactive graphical user interface (GUI) that allows you to build and customize ggplot2 visualizations without writing any code. It's especially helpful for:
+
+1. Beginners with no programming experience
+
+2. Educators and students in statistics
+
+3. Quick exploratory data analysis
+
+## What Esquisse Does?
+
+## Esquisse helps you:
+
+1. Drag and drop variables to define axes, colors, groups, or facets.
+
+2. Choose plot types like scatter plots, bar charts, boxplots, histograms, etc.
+
+3. Modify themes, labels, and axis settings interactively.
+
+4. Automatically generate the corresponding ggplot2 code — so you can copy, tweak, and use it in scripts later.
+
+
+## How to Launch Esquisse in RStudio
+
+1. Install and load the package: (esquisse)
+
+2. Launch by the function esquisser()
+
+3. Load a dataset: You can choose from built-in datasets or upload your own.
+
+## Benefits of Esquisse
+
+1. No coding needed to create powerful plots.
+
+2. Encourages learning ggplot2 by showing live-generated code.
+
+3. Fast prototyping for data exploration.
+
+## Package Information
+
+**Name:** esquisse
+
+**Author:** Julien Barnier
+
+**GitHub:** https://github.com/dreamRs/esquisse
+
+**Official website:** https://dreamrs.github.io/esquisse/
+
+## Getting Started
+
+# Set a working directory 
+This is a default location where R looks for files and saves outputs
+
+```{r}
+setwd("~/2025-AMMnet_Malaria_Modeling_Workshop")    # It tells R where to look for files and where to save files
+ 
+```
+
+# Install and Load necessary packages
+
+This package provides a set of useful functions for data manipulation and visualization. 
+
+```{r}
+# Load the packages
+library(GWalkR)        ## For interactive exploratory data analysis
+library(esquisse)      ## GUI for creating ggplot2 plots interactively
+library(plotly)        ## Convert to interactive plot
+library(rio)           ## For easy data import, export(saving) and conversion
+library(patchwork)     ## Easily combines multiple plots into cohesive layouts
+```
+
+# Load the dataset
+```{r}
+library(rio) ## For easy data importation
+
+SMdata = import("SMdata.csv")       # Mock dataset(SMdata)
+
+```
+
+
+# Exploratory data analysis (EDA)
+
+Before we start visualizing our data, we need to understand the characteristics of our data. 
+
+EDA is a critical step before building models, as it helps in:
+ 
+  ✅ Understanding the data structure and identifying inconsistencies.
+  
+  ✅ Detecting missing values, outliers, and unusual patterns.
+  
+  ✅ Selecting appropriate features for predictive modeling.
+  
+  ✅ Improving data preprocessing and transformation steps.
+  
+  ✅ Summarize key characteristics of a dataset.
+
+## Explore the dataset
+```{r}
+#head(SMdata)
+#dim(SMdata)           # for dimensions of dataset
+#str(SMdata)           # for structure of dataset
+#names(SMdata)         # for features/ variable names in the dataset
+
+```
+
+# Data Visualization
+
+Data visualization helps in understanding patterns, trends, and relationships in data.
+
+It is a crucial element in scientific research, enabling researchers to interpret and communicate their results effectively
+
+# Best Practices
+
+✅ Choose the Right Chart Type (e.g., bar charts for categories, line charts for trends).
+
+✅ Follow Design Principles (simplicity, consistency, accessibility).
+
+✅ Use Storytelling to highlight key insights and structure visuals logically.
+
+✅ Avoid Common Pitfalls (misleading scales, cluttered visuals, unnecessary 3D charts).
+
+## Box Plot: Used for Detecting outliers and understanding the spread of data.
+
+```{r}
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Region, y = Positive, fill = Region) +
+ geom_boxplot() +
+ scale_fill_brewer(palette = "Set1", 
+ direction = 1) +
+  labs(title = "Boxplot of Positive cases by Region") +
+ theme_minimal() +
+theme(plot.title = element_text(hjust = 0.5)) +
+ theme(legend.position = "none")
+```
+
+
+```{r}
+#esquisse::esquisser(SMdata) # Opens the GUI interface in RStudio
+
+```
+
+##️ Histogram: Used for understanding the distribution of a single variable.
+
+```{r}
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Positive) +
+ geom_histogram(bins = 10L, fill = "#4513D9",color= "white") +
+ labs(x = "Positive Malaria Cases", 
+ title = "Histogram") +
+ theme_minimal() +
+ theme(plot.title = element_text(size = 16L, face = "bold", 
+ hjust = 0.5))
+
+#esquisse::esquisser(SMdata) # Opens the GUI interface in RStudio
+```
+
+## Scatter Plot: Used for understanding relationships between two numerical variables.
+
+```{r}
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Total, y = Positive, colour = Region) +
+ geom_point(size = 2.4, shape = "circle") +
+ scale_color_hue(direction = 1) +
+ labs(x = "Total Malaria Cases", y = "Positive Cases", title = "Scatter Plot of Positive cases vs Total malaria cases", 
+ caption = "Source: CDAM Expert, 2025") +
+ theme_minimal() +
+ theme(legend.position = "bottom", plot.title = element_text(size = 16L, 
+ face = "bold", hjust = 0.5), plot.caption = element_text(size = 12L, face = "bold.italic"), axis.title.y = element_text(size = 12L, 
+ face = "bold"), axis.title.x = element_text(size = 12L, face = "bold"), axis.text.y = element_text(size = 12L), 
+ axis.text.x = element_text(size = 12L), legend.text = element_text(size = 12L), legend.title = element_text(face = "bold", 
+ size = 12L))
+
+# esquisse::esquisser(SMdata)
+
+```
+
+## Scatter Plot: Used for understanding relationships between two numerical variables.
+```{r}
+#esquisse::esquisser(SMdata)
+
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Total, y = Positive, colour = Region, size = Positive) +
+ geom_point() +
+ scale_color_hue(direction = 1) +
+ theme_classic() +
+ facet_wrap(vars(Year))
+
+```
+```{r}
+#esquisse::esquisser(SMdata)
+
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Total, y = Positive, colour = Region) +
+ geom_point(size = 3.05, shape = "diamond") +
+ scale_color_hue(direction = 1) +
+ labs(x = "Total Cases", y = "No. of Positive Cases", title = "Scatter plot by Age group", 
+ caption = "Source: Author, 2025") +
+ theme_bw() +
+ theme(legend.position = "bottom", plot.title = element_text(size = 20L, 
+ face = "bold", hjust = 0.5), plot.caption = element_text(size = 12L, face = "bold.italic"), axis.title.y = element_text(size = 15L, 
+ face = "bold"), axis.title.x = element_text(size = 15L, face = "bold"), axis.text.y = element_text(size = 15L), 
+ axis.text.x = element_text(size = 15L), legend.text = element_text(size = 12L)) +
+ facet_wrap(vars(Age))
+
+```
+## Line Plot: Used for showing trends over time or continuous data.
+
+```{r}
+#esquisse::esquisser(SMdata)
+
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Total, y = Positive) +
+ geom_line(colour = "#E1010D") +
+ labs(title = "Line plot of positive cases vs Total malaria cases", 
+ caption = "Source: CDAM Expert, 2025") +
+ theme_minimal() +
+ theme(plot.title = element_text(size = 15L, 
+ face = "bold", hjust = 0.5), plot.caption = element_text(size = 12L), axis.title.y = element_text(size = 12L, 
+ face = "bold"), axis.title.x = element_text(size = 12L, face = "bold"), axis.text.y = element_text(size = 12L), 
+ axis.text.x = element_text(size = 12L))
+
+```
+  
+## Bar Chart: Used for comparing categorical data.
+```{r}
+#esquisse::esquisser(SMdata)
+
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Intervention_Type, fill = Intervention_Type) +
+ geom_bar() +
+ scale_fill_hue(direction = 1) +
+ labs(x = "Intervention Method", 
+      y = "Count of Malaria Cases", 
+      title = "BAR CHART OF MALARIA CASES BY INTERVENTION METHOD", 
+ caption = "Source: CDAM Expert, 2025") +
+ theme_classic() +
+ theme(plot.title = element_text(size = 13L, 
+ face = "bold", hjust = 0.5), 
+ plot.caption = element_text(size = 11L, face = "bold.italic"), 
+ axis.title.y = element_text(size = 12L, 
+ face = "bold"), axis.title.x = element_text(size = 12L, face = "bold")) +
+   theme(legend.position = "none")
+```
+
+```{r}
+#esquisse::esquisser(SMdata)
+
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Intervention_Type, fill = Intervention_Type) +
+ geom_bar() +
+ scale_fill_hue(direction = 1) +
+  labs(x = "Intervention Method", y = "Count of Malaria Cases", title = "BAR CHART OF MALARIA CASES BY INTERVENTION METHOD", 
+ caption = "Source: CDAM Expert, 2025") +
+ coord_flip() +
+ theme_classic() +
+theme(plot.title = element_text(size = 13L, 
+ face = "bold", hjust = 0.5), plot.caption = element_text(size = 11L, face = "bold.italic"), axis.title.y = element_text(size = 12L, 
+ face = "bold"), axis.title.x = element_text(size = 12L, face = "bold")) +
+   theme(legend.position = "none")
+```
+
+```{r}
+ggplot(SMdata, aes(Region, Positive, fill = Region)) +
+  geom_col() +
+  coord_flip() +
+  facet_wrap(vars(Year), scales = "free_y") +
+  theme_bw()
+```
+
+## Pie charts make it easy to see what portion of the total each category represents.
+```{r}
+
+ggplot(SMdata, aes(x = "", y = Positive, fill = Region)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  theme_void() +
+  labs(fill = "Cylinders")
+
+```
+
+## Violin Plot:</b> Used for understanding the distribution of a variable across categories.
+```{r}
+#esquisse::esquisser(SMdata)
+
+library(ggplot2)
+
+ggplot(SMdata) +
+ aes(x = Intervention_Type, y = Incidence_Rate) +
+ geom_col(fill = "#112446") +
+ geom_violin(aes(x = Intervention_Type, y = Positive), adjust = 1L, fill = "#0C57DE") +
+ labs(x = "Intervention Method", y = "Incidence Rate", 
+ title = "Violin plot") +
+ theme_classic() +
+ theme(plot.title = element_text(size = 16L, face = "bold", 
+ hjust = 0.5), axis.title.y = element_text(size = 14L, face = "bold"), axis.title.x = element_text(size = 14L, 
+ face = "bold"), axis.text.y = element_text(size = 14L), axis.text.x = element_text(size = 14L))
+
+```
+
+## Bubble Chart: Used for adding a third variable to a scatter plot(Comparing three numerical variables)  
+```{r}
+library(ggplot2)
+p = ggplot(SMdata, aes(x = Total, y = Positive, size = Incidence_Rate)) +
+  geom_point(alpha = 0.2, color = "blue") +
+  scale_size_continuous(range = c(3, 8)) +
+  labs(
+    title = "Bubble Chart on Malaria Incidence",
+    x = "Total Tests",
+    y = "Positive Cases",
+    size = "Incidence Rate") +
+  theme_classic()
+
+print(p)
+```
+
+
+## Interactive Visualizations: Use tools like Plotly to enable user interaction.
+
+```{r}
+library(plotly) ## Convert to interactive plot
+
+ggplotly(p)
+
+```
+
+## Adds dynamic animations to your visualizations
+```{r}
+library(rio) ## For easy data importation
+
+SMdata = import("SMdata.csv")       # Mock dataset(SMdata)
+
+library(gganimate)     ## Adds dynamic animations to your visualizations
+
+# color point in the plot by Region
+p1 = SMdata |> ggplot( aes(x = Total, y = Positive, color = Region)) +
+  geom_point(size=4) +
+  labs(title="Malaria Positive Cases vs Total by Region",
+       subtitle="Time: {frame_time}",   # Display time as subtitle
+       x= "Total Cases",
+       y= "Number of Positive Cases",
+       caption = " Source: CDAM Experts, 2025") +
+  theme_bw() +
+   theme(plot.title = element_text(hjust = 0.5)) # Align the title to the center
+
+# Add animation with gganimate
+animated_plot <- p1 +
+  transition_time (Year) +  # Animate over 'time' variable
+  ease_aes('linear')       # Smooth linear transitions
+
+animated_plot
+```
+
+
+```{r}
+# create a boxplot
+
+p2 = ggplot(SMdata) +
+ aes(x = Region, y = Positive, fill = Region) +
+ geom_boxplot() +
+ scale_fill_brewer(palette = "Set1", 
+ direction = 1) +
+  labs(title = "Boxplot of Positive cases by Region") +
+ theme_minimal() +
+theme(plot.title = element_text(hjust = 0.5)) +
+ theme(legend.position = "none")
+
+
+# Arrange in a grid layout
+combine_plot <- (p1| p2 ) +
+                plot_annotation(title = "Combined Plots Example")
+# Display the comine plot
+print(combine_plot)
+
+ggsave("Plot_2.png")
+
+```
+
+```{r}
+
+library(ggplot2)
+pp = ggplot(SMdata) +
+ aes(x = Age, y = Total, fill = Age, alpha = Age) +
+ geom_col(position = "fill") +
+ geom_boxplot(aes(fill = Age, 
+ alpha = Age, x = Age, y = Total)) +
+ scale_fill_hue(direction = 1) +
+ theme_minimal()
+# Create the plot with boxplot, jitter, and statistical comparisons
+pp
+
+```
+
+
+
+```{r}
+#esquisse::esquisser(SMdata)
+```
+
+
+```{r}
+library(ggpubr)
+pp + 
+  stat_compare_means(method = "kruskal.test", label.y = 700) +  # Overall Kruskal-Wallis test
+  stat_compare_means(comparisons = list(c("5 to 14", "Above >14"),
+                                        c("5 to 14", "Below <5"),
+                                        c("Above >14", "Below <5")),
+                     method = "wilcox.test", label.y = 550)      # Pairwise Wilcoxon tests
+
+```
+
+
+# GwalkR package
+
+The GWalkR package in R is a powerful tool for data visualization and exploration. Designed to simplify complex data analysis, GWalkR transforms raw data into interactive visualizations, making it easier to understand and interpret your data sets.
+
+## Key features of GWalkR
+
+  **1️⃣ Interactive Plots:** Generate dynamic and interactive plots with minimal code. This helps in identifying trends and patterns in your data quickly.
+
+  **2️⃣ Ease of Use:** With a user-friendly interface, GWalkR is accessible even for those who are new to R. The package integrates seamlessly with other R libraries, enhancing your data analysis workflow.
+
+  **3️⃣ Customization:** GWalkR offers a variety of customization options, allowing you to tailor visualizations to meet your specific needs. From color schemes to plot types, you have complete control over the appearance of your data.
+
+  **4️⃣ Efficiency:** Save time and effort in data analysis by automating the creation of visualizations. GWalkR processes large data sets efficiently, ensuring smooth performance even with extensive data.
+
+  **5️⃣ Community Support:** Benefit from a growing community of users and contributors who share tips, tricks, and support. This makes it easier to troubleshoot issues and stay updated with the latest features.
+
+
+
+```{r}
+library(GWalkR)        ## For interactive exploratory data analysis
+
+GWalkR::gwalkr(SMdata)
+
+```
+
+# References
+
+**Website** https://github.com/Kanaries/gwalkR
+
+```{r}
+
+```
+
