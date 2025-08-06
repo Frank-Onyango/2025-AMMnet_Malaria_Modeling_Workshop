@@ -1,0 +1,790 @@
+---
+title:  "Malaria Risk Prediction in Kenya using Artificial Intelligence (AI) & Machine Learning(ML) Models"
+author:
+- name: D.K.Muriithi
+  affiliation: Chuka University, Kenya
+#institute: CDAM
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.height = 4,
+	fig.width = 8,
+	message = FALSE,
+	warning = FALSE,
+	comment = NA)
+
+```
+
+# Get started
+
+# Set a working directory 
+
+ This is a default location where R looks for files and saves outputs
+ 
+```{r}
+setwd("~/2025-AMMnet_Malaria_Modeling_Workshop")
+
+```
+
+# Install and load necessary libraries
+
+**Loading libraries**
+
+```{r}
+library(caret)         ## for training machine learning models
+library(psych)         ## for description of  data
+library(ggplot2)       ## for data visualization
+library(caretEnsemble) ## enables the creation of ensemble models
+library(tidyverse)     ## for data manipulation
+library(mlbench)       ## for benchmarking ML Models
+library(flextable)     ## to create and style tables
+library(mltools)       ## for hyperparameter tuning
+library(tictoc)        ## for determining the time taken for a model to run
+library(ROSE)          ## for random oversampling
+library(smotefamily)   ## for smote sampling
+library(ROCR)          ## for ROC curve
+library(pROC)          ## for visualizing, smoothing, and comparing ROC curves
+library(e1071)         ## for statistical modeling and  machine learning tasks(SVM)
+library(class)         ## for classification using k-Nearest Neighbors and other methods
+library(caTools)       ## for splitting data into training and testing sets
+library(MASS)          ## provides plotting functions and datasets
+library(ISLR)          ## for practical applications of statistical learning methods
+library(boot)          ## useful for performing bootstrap resampling
+library(cvTools)       ## contains functions for cross-validation, bootstrapping, & other resampling methods
+library(iml)           ## provide tools to analyze and interpret machine learning models
+library(lime)          ## powerful tools for interpreting machine learning models
+library(DALEX)         ## powerful tool for interpreting machine learning models. 
+library(rio)           ## for easy data import, export(saving) and conversion
+library(esquisse)      ## GUI tool that allows users to easily create ggplot2 plots interactively
+
+```
+
+# Load and prepare data/Exporatory of the dataset
+
+```{r}
+library(rio) ## for easy data import, export(saving) and conversion
+
+data = import("Malaria Dataset.csv")
+
+
+#head(data)          # for the 1st few rows in the dataset
+#tail(data)          # for the last few rows in the dataset
+
+```
+
+
+# Exploratory Data Analysis (EDA)
+
+Before we start visualizing our data, we need to understand the characteristics of our data. The goal is to get an idea of the data structure and to understand the relationships between variables.
+
+Here are some functions that can help us understand the structure of our data:
+
+```{r}
+#dim(data)           # for dimensions of dataset
+
+#summary(data)       # for summary of descriptive statistics
+#describe(data)      # for descriptive statistics
+
+
+```
+
+## Check for data structure 
+```{r}
+str(data)     
+```
+
+## Convert all character variables to factors
+```{r}
+data[] <- lapply(data, function(x) if(is.character(x)) as.factor(x) else x)
+
+```
+
+## Diagnose the data set
+```{r}
+library(gtsummary)    #create publication-ready summary tables for regression models and descriptive statistics
+library(flextable)    #Creates highly customizable tables suitable for reporting and publication
+library(dlookr)       #Analyzes the structure and quality of the dataset
+
+diagnose(data) |> flextable()
+
+#Explore individual columns/variables
+#unique(data$Region)                          # unique values for single column
+#table(data$Malaria_Result)                           # frequency for a single column
+#table(data$Region, data$Intervention_Type) # frequencies for multiple columns
+```
+
+
+## Check for zero variance predictors:
+```{r}
+nzv <- nearZeroVar(data[,-18], saveMetrics = TRUE)
+print(nzv)
+
+##The results above show that there is no feature with zero variance
+## Remove nzv
+
+#data <- data[, !nzv$nzv]
+#dim(data)
+
+```
+
+## Visualizing the Target Variable (Malaria Test Results)
+```{r, fig.height = 6}
+library(ggplot2)       ## for data visualization
+
+# Plot Target variable using ggplot2 function
+# Sample dataset
+dt <- data.frame(
+  Malaria_Result = c("Negative", "Positive"),
+  Respondent = c(820, 180)) # Replace with actual numbers
+
+# Calculate percentages
+dt1 <- dt %>%
+  mutate(Percentage = Respondent / sum(Respondent) * 100)
+
+# Create the bar plot
+dt1 |> ggplot(aes(x = Malaria_Result, y = Respondent, fill = Malaria_Result)) +
+  geom_bar(stat = "identity", show.legend = TRUE) +
+  geom_text(aes(label = paste0(Respondent, " (", round(Percentage, 1), "%)")),vjust = -0.5, size = 5) +
+  labs(title = "Imbalance Malaria Data",
+       x = "Malaria Test Result",
+       y = "Respondent",
+       fill = "Results") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Align the title to the center
+
+```
+
+# Data Partition for Machine Learning
+```{r}
+library(caret)
+
+set.seed(123)
+
+# Create a partition: 75% for training, 25% for testing
+index <- createDataPartition(data$Malaria_Result,p = 0.75, list = FALSE)
+
+# Create training and testing sets
+train <- data[index, ]
+test <- data[-index, ]
+
+# Get the dimensions of your train and test data
+dim(train)
+dim(test)
+
+```
+
+
+```{r, fig.height=6}
+##frequency distribution of classes of the target variable in the train dataset
+#table(train$Malaria_Result)
+#table(test$Malaria_Result)
+
+# Plot Target variable using ggplot2 function
+# Sample dataset
+dt1 <- data.frame(
+  Malaria_Result = c("Negative", "Positive"),
+  Respondent = c(615, 135)) # Replace with actual numbers
+
+
+# Calculate percentages
+dt1 <- dt1 |>
+  mutate(Percentage = Respondent / sum(Respondent) * 100)
+
+# Create the bar plot
+p1 = dt1 |> ggplot(aes(x = Malaria_Result, y = Respondent, fill = Malaria_Result)) +
+  geom_bar(stat = "identity", show.legend = TRUE) +
+  geom_text(aes(label = paste0(Respondent, " (", round(Percentage, 1), "%)")),vjust = -0.5, size = 5) +
+  labs(title = "Imbalance Malaria Data (Training set)",
+       x = "Malaria Test Result",
+       y = "Respondent",
+       fill = "Results") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Align the title to the center
+print(p1)
+```
+
+# View the models in CARET
+```{r}
+models= getModelInfo()
+#names(models)
+```
+
+
+# Resampling techinque (Over-sampling)
+
+The minority class is duplicated (synthetically) until both classes have roughly the same number of samples.
+
+```{r, fig.height= 6}
+library(ROSE)    ## used for balancing imbalanced datasets (e.g., in binary classification)
+
+set.seed(123)    ## ensures reproducibility: Every time you run this code, you get the same random over-sampling result
+
+over<- ovun.sample(Malaria_Result~., data = train, method = "over", N = 1230 )$data # over-samples the minority class to balance the dataset
+# Calculate counts and percentages
+over_summary <- over |>
+  group_by(Malaria_Result) |>
+  summarise(Count = n()) |>
+  mutate(Percent = round(Count / sum(Count) * 100, 1))
+  
+  # Plot
+p2 = ggplot(over, aes(x = Malaria_Result, fill = Malaria_Result)) +
+  geom_bar() +
+  geom_text(data = over_summary, aes(x = Malaria_Result, y = Count, 
+             label = paste0(Count, "(", Percent, "%)")), 
+            vjust = -0.5,     # moves text higher vertically
+            hjust = 0.5,      # centers text horizontally
+            size = 5) +
+labs(title ="Balanced Malaria Data(Training set)",
+     y = "Respondent",
+     x = "Malaria Test Result") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5)) # Align the title to the center
+
+print(p2)
+
+```
+
+
+```{r, fig.height=6, fig.width=12}
+library(patchwork)
+library(easystats)
+
+# Display the nested plot
+plots(p1, p2, n_columns = 2, tags = paste("Fig.", 1:23))
+```
+
+# Cross validation technique
+
+**Cross-validation (CV)** is a resampling technique used to evaluate the performance of a machine learning model and test its ability to generalize to unseen data. The idea is to train and test the model on different subsets of the data to reduce bias and variance in performance estimation. It helps in detecting overfitting and selecting better hyperparameters.
+
+  <div style='text-align:center;margin:auto;display:block:'><IMG  src=  "C:\Users\Admin\Documents\2025_CDAM_WORKSHOP_1\Bais-Variance.png"></div>
+  
+**Two key contributors to model performance are bias and Variance**
+
+**Bias**: We want prediction that are close to the true value of the outcome we arE trying to predict
+
+**Variance:** We want predictions that do not vary too much around the true value
+
+**NB:**A model that performs well on new data will balance these two
+
+
+**Hyperparameters** are the settings you specify before training a machine learning model. They control the learning process and influence how well the model performs, but they are not learned from the data.
+
+```{r}
+#Creating the train-Control scheme to avoid overfitting & underfitting
+
+library(caret)
+
+control <- trainControl(
+  method = "repeatedcv",     # Use repeated cross-validation
+  number = 10,               # 10-fold cross-validation
+  repeats = 5,               # Repeat the 10-fold CV 5 times
+  classProbs = TRUE,         # Compute class probabilities
+  summaryFunction = twoClassSummary)  # Use metrics like ROC, Sensitivity, Specificity
+
+```
+
+**method = "repeatedcv":** This tells caret::train() to use repeated k-fold cross-validation.
+
+**number = 10:** Specifies 10 folds (i.e., 10-fold cross-validation).
+
+**repeats = 5:** The entire 10-fold process will be repeated 5 times, each with a different random split.
+
+**This setup is useful for:**
+
+   - Reducing variance in the performance estimate.
+
+   - Ensuring the model's performance is stable across different splits of the data.
+   
+   - Getting a more reliable estimate of the model’s accuracy, precision, RMSE, or other metrics.
+
+# Train Machine learning Model
+
+# Logistic Regression
+
+```{r}
+# Load libraries
+library(caret)               ## for training machine learning models
+library(tictoc)              ## for determining the time taken for a model to run
+
+tic()
+set.seed(123)                ## Ensures that results are reproducible
+
+LRModel <- train(factor(Malaria_Result) ~ ., 
+                 data = over, 
+                 method = "glm", 
+                 trControl = control)
+toc()
+LRModel
+
+```
+
+```{r}
+# Prediction using Logistic Regression model
+LRpred = predict(LRModel,newdata = test)
+
+# Evaluation of the Logistic Regression model performance metrics
+LR_CM <- confusionMatrix(LRpred,as.factor(test$Malaria_Result), positive = "Positive", mode='everything')
+LR_CM
+
+```
+
+```{r}
+# Combine data into a data frame
+Ground_truth<- test$Malaria_Result
+Predicted <- LRpred
+
+resultLR <- data.frame(Ground_truth, Predicted)
+resultLR$Correct <- resultLR$Ground_truth == resultLR$Predicted
+
+# Add a column for classification results (correct/incorrect)
+resultLR<- data.frame(test, LRpred, resultLR$Correct)
+#print(resultLR)
+
+```
+
+
+## Plot of Confusion Matrix of Logistic Regression
+```{r}
+#load required packages
+library(reshape2)
+library(scales)
+
+# Create the confusion matrix
+conf_matrix <- matrix(c(194, 11, 2, 43), nrow = 2, byrow = TRUE)
+
+# Name the rows and columns
+rownames(conf_matrix) <- c("Negative","Positive")
+colnames(conf_matrix) <- c("Negative","Positive")
+
+# Melt the matrix for ggplot
+conf_df <- melt(conf_matrix)
+
+# Plot
+ggplot(conf_df, aes(x = Var2, y = Var1, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = value), color = "red", size = 6) +
+  scale_fill_gradient(low = "white", high = "purple") +
+  labs(title = "Logistic Regreession Confusion Matrix", x = "Predicted label", y = "True label") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    axis.text = element_text(face = "bold"))
+
+```
+## Model performance metric for classification
+**Confusion matrix **: is a performance evaluation tool used for classification models. It shows how well the model's predicted classes match the actual classes.
+
+ <div style='text-align:center;margin:auto;display:block:'><IMG  src=  "C:\Users\Admin\Documents\2025_CDAM_WORKSHOP_1\confusion-matrix.jpeg"></div>
+ 
+********************************************************************************
+**Accuracy: The proportion of all predictions that are correct ** used to determine the performance of the Algorithms
+
+$$
+\text{Accuracy} = \frac{TP + TN}{TP + FP + FN + TN} =\frac{43 + 194}{43 + 11 + 2 + 194} = 0.948
+$$ 
+
+**Interpretation:**
+
+   - How often the classifier is correct overall.
+   
+   -⚠️ Can be misleading if classes are imbalanced.
+   
+********************************************************************************
+**True Positive Rate (TPR): Also known as sensitivity or recall** 
+
+   - It is the ratio of correctly predicted positive observations to the actual positives. 
+
+$$
+\text{Sensitivity} = \frac{TP}{TP + FN} = 0.956
+$$
+
+where TP is True Positives and FN is False Negatives.
+
+**Interpretation:**
+
+   - Of all the true positive cases, how many did the model catch?
+  
+   - 📌 Important in medical diagnosis, fraud detection.
+   
+********************************************************************************
+**False Positive Rate (FPR). Also known as specificity **
+
+   - It is the ratio of incorrectly predicted positive observations to the actual negatives.
+   
+$$
+\text{Specificity} = \frac{TN}{TN + FP} = 0.946
+$$
+ 
+
+where FP is False Positives and TN is True Negatives.
+
+**Interpretation:**
+
+   - Of all the true negative cases, how many did the model correctly identify?
+
+   - 📌 Important to minimize false alarms.
+   
+
+********************************************************************************
+**Precision: The proportion of predicted positives that are actually positive**
+
+used to test the correctness of the model when it gives a positive outcome
+
+$$
+\text{Precision} = \frac{TP}{TP + FP} = 0.796
+$$
+
+**Interpretation:**
+
+  - How trustworthy are the positive predictions?
+
+  -📌 Important when false positives are costly (e.g., spam filters, cancer screening, malaria detection).
+
+********************************************************************************
+
+**F1 score: The harmonic mean of precision and recall. It balances the two when both are important.**
+
+Used to assess the number of variables that are missing in the predictions which are positive target
+
+$$
+F_1 Score = \frac{2 \cdot \text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}} = 0.869
+$$
+
+**Interpretation:**
+
+   - F1 reaches its best value at 1 (perfect precision and recall) and worst at 0.
+
+   - 📌 Useful in imbalanced classification tasks.
+
+********************************************************************************
+
+## Importance of features in a Logistic regression Model
+
+```{R}
+# Show relative importance of features
+# vip::vip(LRModel)
+
+# Alternatively using ggplot function
+var_imp <-varImp(LRModel)
+ggplot(var_imp, aes(x = reorder(Variable, Importance), y = importance)) +
+  geom_bar(stat = "identity", fill = "tomato") +
+  coord_flip() +
+  xlab("Variable") +
+  ylab("Importance") +
+  ggtitle("Feature Importance Plot for LR Model") +
+  theme(plot.title = element_text(hjust = 0.5)) # Align the title to the center
+
+```
+
+## Prepare data for explain() function
+
+```{R}
+library(DALEX)  ## powerful tool for interpreting machine learning models.
+
+# Converts the target variable from categorical ("Positive"/"Negative") to numeric (1=for Positive, 0=otherwise) 
+# Required for many ML models and for DALEX to interpret the output as binary classification.
+
+train$Malaria_Result <- ifelse(train$Malaria_Result == "Positive", 1, 0) 
+
+# Create the explainer Object
+explainer_1 <- explain(model = LRModel,
+                     data = train[, -which(names(train) =="Malaria_Result")],  # Exclude the target column
+                     y = train$Malaria_Result,                                 # Target values as vector
+                     label = "Local Explanation with DALEX for Logistics Regression")
+
+# This creates an explainer1 object used by the DALEX and ingredients packages for interpretability methods
+```
+
+```{r}
+# Select an instance to explain from test set or new unseen data 
+
+set.seed(123)
+new_observation_1 <- test[3, -which(names(test)=="Malaria_Result")]  # Select a test instance
+#new_observation_1
+
+# Break Down explanation for the instance
+local_explanation_1 <- predict_parts(explainer_1, new_observation_1)
+
+# Plot local explanation
+plot(local_explanation_1)
+
+```
+
+## Overview
+The graph presents a local explanation of a RF model using the DALEX package. It visualizes
+how different predictor variables contribute to the prediction for a specific instance. The prediction is
+represented by the bar on the right, and the contributions of each variable are shown as horizontal bars.
+
+## Breakdown of Contributions
+• Intercept: This baseline value represents the model’s prediction when all predictor variables are zero
+ or absent. In this case, the intercept is xxxxxx
+ 
+• Predictor Variables: Each predictor variable’s contribution is shown as a bar. The color indicates the
+ direction of the contribution:
+ 
+• Green: Positive contribution, meaning the variable increases the prediction.
+
+• Red: Negative contribution, meaning the variable decreases the prediction.
+
+• The length of the bar represents the magnitude of the contribution.
+
+## Overall Prediction
+
+Summing up all the contributions (intercept + predictor variables), we arrive at the final prediction of xxxx
+This value represents the probability of a positive outcome, as RF model typically output probabilities.
+
+This graph provides a valuable tool for understanding how a RF model arrives at a specific prediction. It highlights the relative importance of different predictor variables and their impact on the final outcome.
+
+However, it is essential to consider the limitations and interpret the results in conjunction with other model evaluation metrics
+
+## SHAP(SHapley Additive exPlanations)
+
+The Shapley value helps explain how much each feature contributes to the prediction made by a machine
+learning model. It provides a way to fairly distribute the “credit” for the model’s output across all input
+features. By visualizing the SHAP plot, you can understand not only which features are important, but also
+how specific feature values that are driving predictions for individual cases.
+
+## SHAP explanation
+
+```{r}
+shap_values_1 <- predict_parts(explainer_1, new_observation_1, type = "shap")
+
+plot(shap_values_1)
+
+```
+
+## Overview 
+
+1. Leftward(negative): Indicates the feature is pushing the model prediction towards a negative class
+
+2. Larger absolute SHAP values mean a feature has a stronger influence on the prediction.
+
+3. Smaller SHAP values (close to zero) indicate that a feature has minimal influence on the model’s output for
+that instance
+
+## Partial Dependence Plots (PDP)
+
+PDP show the relationship between a feature and the predicted outcome while keeping other features constant. This can be particularly useful in diabetes prediction models, as it allows clinicians to visualize how changes in a single factor (e.g., glucose levels or BMI) affect the likelihood of diabetes while accounting for other variables. 
+
+  - Understand the relationship between features and predictions.
+    
+  - Visualizes the relationship between features and the target prediction
+    
+  - Understand non-linear relationships
+
+```{r}
+## Partial Dependence Plot for Temperature
+
+pdp <- model_profile(explainer_1, variables = "Temperature", type = "partial")
+plot(pdp)
+
+## Partial Dependence Plot for Humidity
+
+pdp <- model_profile(explainer_1, variables = "Humidity", type = "partial")
+plot(pdp)
+
+```
+
+# Random Forest 
+
+This is an ensemble learning method that combines multiple decision trees to improve prediction accuracy and reduce variance.
+## mtry
+This parameter controls the number of features randomly chosen as candidates for splitting a node in each tree.
+## Training the RF model
+```{R}
+# Load libraries
+library(caret)
+
+set.seed(123)
+tuneGrid_rf <- expand.grid(mtry = c(2, 4, 6, 8, 12))
+
+tic()
+RFModel <- train(factor(Malaria_Result)~., 
+                 data=over, 
+                 method="rf", 
+                 trControl=control, 
+                 tuneGrid=tuneGrid_rf)
+toc()
+RFModel
+#plot(RFModel)
+```
+
+## Prediction & Evaluation of the RF model performance metrics
+
+```{R}
+# Prediction using RF model
+RFpred=predict(RFModel,newdata = test)
+
+# Evaluation of the RF model performance metrics
+RF_CM<- confusionMatrix(RFpred,as.factor(test$Malaria_Result), positive = "Positive", mode='everything')
+RF_CM
+
+```
+
+## Plot of Confusion Matrix of Random Forest
+```{r}
+#load required packages
+library(reshape2)
+library(scales)
+
+# Create the confusion matrix
+conf_matrix <- matrix(c(201, 5, 4, 40), nrow = 2, byrow = TRUE)
+
+# Name the rows and columns
+rownames(conf_matrix) <- c("Negative","Positive")
+colnames(conf_matrix) <- c("Negative","Positive")
+
+# Melt the matrix for ggplot
+conf_df <- melt(conf_matrix)
+
+# Plot
+ggplot(conf_df, aes(x = Var2, y = Var1, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = value), color = "black", size = 6) +
+  scale_fill_gradient(low = "white", high = "purple") +
+  labs(title = "Random Forest Confusion Matrix", x = "Predicted label", y = "True label") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    axis.text = element_text(face = "bold"))
+```
+
+## Importance of features in a Random Model
+
+```{R}
+# Show relative importance of features
+# vip::vip(RFModel)
+
+# Alternatively using ggplot function
+var_imp <-varImp(RFModel)
+ggplot(var_imp, aes(x = reorder(Variable, Importance), y = importance)) +
+  geom_bar(stat = "identity", fill = "tomato") +
+  coord_flip() +
+  xlab("Variable") +
+  ylab("Importance") +
+  ggtitle("Feature Importance Plot for RF Model") +
+  theme(plot.title = element_text(hjust = 0.5)) # Align the title to the center
+
+```
+
+## Prepare data for explain() function
+```{R}
+library(DALEX)
+
+# Converts the target variable from categorical ("Positive"/"Negative") to numeric (1 for Positive, 0 otherwise) 
+# Required for many ML models and for DALEX to interpret the output as binary classification.
+
+train$Malaria_Result <- ifelse(train$Malaria_Result == "Positive", 1, 0) 
+
+# Create the explainer Object
+explainer_2 <- explain(model = RFModel,
+                     data = train[, -which(names(train) =="Malaria_Result")],  # Exclude the target column
+                     y = train$Malaria_Result,                                 # Target values as vector
+                     label = "Local Explanation with DALEX for Random Forest")
+
+# This creates an explainer object used by the DALEX and ingredients packages for interpretability methods
+```
+
+
+```{r}
+# Select an instance to explain
+new_observation_2 <- test[3, -which(names(test)=="Malaria_Result")]  # Select a test instance
+new_observation_2
+
+# Break Down explanation for the instance
+local_explanation_2 <- predict_parts(explainer_2, new_observation_2)
+
+# Plot local explanation
+plot(local_explanation_2)
+
+```
+## Overview
+
+The graph presents a local explanation of a RF model using the DALEX package. It visualizes
+how different predictor variables contribute to the prediction for a specific instance. The prediction is
+represented by the bar on the right, and the contributions of each variable are shown as horizontal bars.
+
+## Breakdown of Contributions
+
+• Intercept: This baseline value represents the model’s prediction when all predictor variables are zero
+ or absent. In this case, the intercept is 0.221
+ 
+• Predictor Variables: Each predictor variable’s contribution is shown as a bar. The color indicates the
+ direction of the contribution:
+ 
+• Green: Positive contribution, meaning the variable increases the prediction.
+
+• Red: Negative contribution, meaning the variable decreases the prediction.
+
+• The length of the bar represents the magnitude of the contribution.
+
+## Overall Prediction
+Summing up all the contributions (intercept + predictor variables), we arrive at the final prediction of 0.95.
+This value represents the probability of a positive outcome, as RF model typically output probabilities.
+
+This graph provides a valuable tool for understanding how a RF model arrives at a specific prediction. It highlights the relative importance of different predictor variables and their impact on the final outcome.
+
+However, it is essential to consider the limitations and interpret the results in conjunction with other model evaluation metrics
+ 
+## SHAP(SHapley Additive exPlanations)
+
+The Shapley value helps explain how much each feature contributes to the prediction made by a machine
+learning model. It provides a way to fairly distribute the “credit” for the model’s output across all input
+features. By visualizing the SHAP plot, you can understand not only which features are important, but also
+how specific feature values that are driving predictions for individual cases.
+
+## SHAP explanation
+
+```{r}
+shap_values_2 <- predict_parts(explainer_2, new_observation_2, type = "shap")
+
+plot(shap_values_2)
+
+```
+
+## Overview 
+
+1. Leftward(negative): Indicates the feature is pushing the model prediction towards a negative class
+
+2. Larger absolute SHAP values mean a feature has a stronger influence on the prediction.
+
+3. Smaller SHAP values (close to zero) indicate that a feature has minimal influence on the model’s output for
+that instance
+
+## Partial Dependence Plots (PDP)
+
+PDP show the relationship between a feature and the predicted outcome while keeping other features constant. This can be particularly useful in diabetes prediction models, as it allows clinicians to visualize how changes in a single factor (e.g., glucose levels or BMI) affect the likelihood of diabetes while accounting for other variables. 
+
+  - Understand the relationship between features and predictions.
+    
+  - Visualizes the relationship between features and the target prediction
+    
+  - Understand non-linear relationships
+
+```{r}
+## Partial Dependence Plot for Humidity
+
+pdp <- model_profile(explainer_2, variables = "Humidity", type = "partial")
+plot(pdp)
+
+```
+
+
+## ASSIGNMENT(Try for other Models)
+# NB: You can try other models like SVM, KNN, Naive Baiyes, XGBoost, LightGBM, CatBoost, etc. by following the same pattern as above.
+
+```{r}
+
+```
+
