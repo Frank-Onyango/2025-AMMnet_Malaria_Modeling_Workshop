@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
  This is a default location where R looks for files and saves outputs
  
 ```{r}
-setwd("~/2025-AMMnet_Malaria_Modeling_Workshop")
+#setwd("~/2025-AMMnet_Malaria_Modeling_Workshop")
 
 ```
 
