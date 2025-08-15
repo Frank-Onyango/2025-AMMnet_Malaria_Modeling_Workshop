@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
  This is a default location where R looks for files and saves outputs
  
 ```{r}
-setwd("~/2025-AMMnet_Malaria_Modeling_Workshop")
+#setwd("~/2025-AMMnet_Malaria_Modeling_Workshop")
 
 ```
 
@@ -62,7 +62,7 @@ library(lime)          ## powerful tools for interpreting machine learning model
 library(DALEX)         ## powerful tool for interpreting machine learning models. 
 library(rio)           ## for easy data import, export(saving) and conversion
 library(esquisse)      ## GUI tool that allows users to easily create ggplot2 plots interactively
-
+library(randomForest)
 ```
 
 # Load and prepare data/Exporatory of the dataset
@@ -73,7 +73,7 @@ library(rio) ## for easy data import, export(saving) and conversion
 data = import("Malaria Dataset.csv")
 
 
-#head(data)          # for the 1st few rows in the dataset
+head(data)          # for the 1st few rows in the dataset
 #tail(data)          # for the last few rows in the dataset
 
 ```
@@ -86,10 +86,10 @@ Before we start visualizing our data, we need to understand the characteristics 
 Here are some functions that can help us understand the structure of our data:
 
 ```{r}
-#dim(data)           # for dimensions of dataset
+dim(data)           # for dimensions of dataset
 
 #summary(data)       # for summary of descriptive statistics
-#describe(data)      # for descriptive statistics
+describe(data)      # for descriptive statistics
 
 
 ```
@@ -112,6 +112,7 @@ library(flextable)    #Creates highly customizable tables suitable for reporting
 library(dlookr)       #Analyzes the structure and quality of the dataset
 
 diagnose(data) |> flextable()
+
 
 #Explore individual columns/variables
 #unique(data$Region)                          # unique values for single column
@@ -212,7 +213,7 @@ print(p1)
 # View the models in CARET
 ```{r}
 models= getModelInfo()
-#names(models)
+names(models)
 ```
 
 
@@ -316,7 +317,7 @@ library(tictoc)              ## for determining the time taken for a model to ru
 tic()
 set.seed(123)                ## Ensures that results are reproducible
 
-LRModel <- train(factor(Malaria_Result) ~ ., 
+LRModel <- train(Malaria_Result ~ ., 
                  data = over, 
                  method = "glm", 
                  trControl = control)
@@ -345,7 +346,7 @@ resultLR$Correct <- resultLR$Ground_truth == resultLR$Predicted
 
 # Add a column for classification results (correct/incorrect)
 resultLR<- data.frame(test, LRpred, resultLR$Correct)
-#print(resultLR)
+print(resultLR)
 
 ```
 
@@ -608,7 +609,7 @@ set.seed(123)
 tuneGrid_rf <- expand.grid(mtry = c(2, 4, 6, 8, 12))
 
 tic()
-RFModel <- train(factor(Malaria_Result)~., 
+RFModel <- train(Malaria_Result ~., 
                  data=over, 
                  method="rf", 
                  trControl=control, 
@@ -699,7 +700,7 @@ explainer_2 <- explain(model = RFModel,
 
 ```{r}
 # Select an instance to explain
-new_observation_2 <- test[3, -which(names(test)=="Malaria_Result")]  # Select a test instance
+new_observation_2 <- test[1, -which(names(test)=="Malaria_Result")]  # Select a test instance
 new_observation_2
 
 # Break Down explanation for the instance
@@ -728,6 +729,7 @@ represented by the bar on the right, and the contributions of each variable are 
 • Red: Negative contribution, meaning the variable decreases the prediction.
 
 • The length of the bar represents the magnitude of the contribution.
+
 
 ## Overall Prediction
 Summing up all the contributions (intercept + predictor variables), we arrive at the final prediction of 0.95.
